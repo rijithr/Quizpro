@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ title or 'QuizPro' }} — QuizPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="wrapper">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="nav-brand">
+        <div class="brand-icon">🧠</div>
+        QuizPro
+      </a>
+
+      {% if current_user.is_authenticated %}
+      <div class="nav-links">
+        {% if current_user.is_creator %}
+          <a href="{{ url_for('creator.dashboard') }}"
+             class="nav-a {% if 'creator' in (request.endpoint or '') %}active{% endif %}">Dashboard</a>
+          <a href="{{ url_for('creator.create_quiz') }}" class="nav-a">+ New Quiz</a>
+        {% else %}
+          <a href="{{ url_for('student.dashboard') }}"
+             class="nav-a {% if request.endpoint == 'student.dashboard' %}active{% endif %}">Quizzes</a>
+          <a href="{{ url_for('student.history') }}"
+             class="nav-a {% if request.endpoint == 'student.history' %}active{% endif %}">My History</a>
+        {% endif %}
+        <div class="nav-user" style="margin-left:.5rem">
+          <div class="avatar">{{ current_user.username[0].upper() }}</div>
+          <span class="username" style="font-size:13px;font-weight:600">{{ current_user.username }}</span>
+          <span class="role-chip">{{ current_user.role|capitalize }}</span>
+          <a href="{{ url_for('auth.logout') }}" class="nav-a btn-sm" style="padding:4px 9px;margin-left:2px;color:var(--t3)">Out</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="nav-links">
+        <a href="{{ url_for('auth.login') }}"    class="nav-a">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Get Started</a>
+      </div>
+      {% endif %}
+    </div>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-area">
+      <div class="container">
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} fade-in">
+          {% if cat=='success' %}✅{% elif cat=='danger' %}❌{% elif cat=='warning' %}⚠️{% else %}ℹ️{% endif %}
+          {{ msg }}
+          <button class="alert-x" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="main">{% block content %}{% endblock %}</main>
+
+  <footer>QuizPro &copy; 2024 — AI-Powered Quiz Platform</footer>
+</div>
+
+<script>
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(el => {
+      el.style.transition = 'opacity .4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    });
+  }, 5000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

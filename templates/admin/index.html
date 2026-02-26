@@ -1,0 +1,29 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<div style="padding: 40px; margin-top: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="color: #343a40;">Welcome, Admin!</h1>
+        <a href="{{ url_for('auth.logout') }}"
+            style="padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Logout</a>
+    </div>
+    <p style="font-size: 1.25rem; color: #6c757d;">This is your master administration control panel for the QuizPro
+        Platform.</p>
+    <hr style="margin-top: 20px; margin-bottom: 20px;">
+
+    <p style="font-size: 1.1rem;">From here, you have root access to modify everything in the database. Use the top
+        navigation bar to access different modules.</p>
+
+    <div style="margin-top: 30px;">
+        <h3 style="color: #495057;">Tips for navigation:</h3>
+        <ul style="font-size: 1.1rem; line-height: 1.8;">
+            <li>💡 <b>Organized Questions</b>: Instead of searching through mixed questions, click on <b>Quizzes</b>
+                above, and click the <i>Edit</i> (pencil) button on any specific quiz. The questions for that quiz will
+                be shown and editable directly at the bottom of the form!</li>
+            <li>🔍 <b>Powerful Filters</b>: In each section, you can use the built-in search bar and filters to quickly
+                find specific data (e.g. filter Questions by a specific Quiz title, or search Users by Email).</li>
+            <li>👥 <b>User Management</b>: You can promote Students to Creators or demote users in the <b>Users</b>
+                module.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

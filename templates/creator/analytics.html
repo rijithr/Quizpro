@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-md">
+  <div class="ph">
+    <div>
+      <h1>📊 Analytics</h1>
+      <p>{{ quiz.title }}</p>
+    </div>
+    <a href="{{ url_for('creator.manage_questions', quiz_id=quiz.id) }}" class="btn btn-outline">← Back</a>
+  </div>
+
+  <div class="stats mb6">
+    <div class="stat"><div class="stat-icon">🎯</div><div class="stat-value tcyan">{{ attempts|length }}</div><div class="stat-label">Completed Attempts</div></div>
+    <div class="stat"><div class="stat-icon">📈</div><div class="stat-value" style="color:#4ade80">{{ avg_score }}%</div><div class="stat-label">Average Score</div></div>
+    <div class="stat"><div class="stat-icon">🏆</div><div class="stat-value tamber">{{ best_score }}%</div><div class="stat-label">Highest Score</div></div>
+    <div class="stat"><div class="stat-icon">⏱</div><div class="stat-value" style="color:#c084fc">{{ avg_duration }}m</div><div class="stat-label">Avg Duration</div></div>
+  </div>
+
+  <!-- Per-question accuracy -->
+  <div class="card mb5">
+    <div class="card-head"><h3 style="font-size:1rem;font-weight:700">Question Accuracy</h3></div>
+    <div class="card-body">
+      {% if q_stats %}
+        {% for s in q_stats %}
+        <div style="margin-bottom:1.25rem">
+          <div class="flex ai-c jb mb2" style="gap:.75rem">
+            <span style="font-size:13px;font-weight:500;flex:1">Q{{ loop.index }}: {{ s.question.text[:70] }}{% if s.question.text|length > 70 %}...{% endif %}</span>
+            <span style="font-size:13px;font-weight:700;white-space:nowrap;
+              color:{% if s.accuracy>=70 %}#4ade80{% elif s.accuracy>=40 %}var(--amber){% else %}#fb7185{% endif %}">
+              {{ s.correct }}/{{ s.total }} ({{ s.accuracy }}%)
+            </span>
+          </div>
+          <div class="progress" style="height:7px">
+            <div class="pbar {% if s.accuracy>=70 %}green{% elif s.accuracy<40 %}red{% else %}amber{% endif %}"
+                 style="width:{{ s.accuracy }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="t3" style="font-size:14px">No data yet — students need to attempt this quiz first.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Attempt log -->
+  <div class="card">
+    <div class="card-head"><h3 style="font-size:1rem;font-weight:700">Attempt Log</h3></div>
+    {% if attempts %}
+    <div class="tbl-wrap" style="border:none;border-radius:0">
+      <table>
+        <thead><tr><th>Student</th><th>Score</th><th>%</th><th>Grade</th><th>Duration</th><th>Submitted</th></tr></thead>
+        <tbody>
+          {% for a in attempts %}
+          <tr>
+            <td class="fw7">{{ a.student.username }}</td>
+            <td>{{ a.total_score }}/{{ a.max_score }}</td>
+            <td><b style="color:{% if a.score_percentage>=70 %}#4ade80{% elif a.score_percentage>=50 %}var(--amber){% else %}#fb7185{% endif %}">{{ a.score_percentage }}%</b></td>
+            <td><span class="badge {% if a.score_percentage>=70 %}b-success{% elif a.score_percentage>=50 %}b-warning{% else %}b-danger{% endif %}">{{ a.grade[0] }}</span></td>
+            <td>{{ a.duration_minutes }}m</td>
+            <td class="t3" style="font-size:13px">{{ a.completed_at.strftime('%b %d, %Y %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p class="t3" style="font-size:14px">No completed attempts yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

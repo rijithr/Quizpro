@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <div class="ph">
+    <div>
+      <h1>Creator Dashboard</h1>
+      <p>Build quizzes, track performance, grow your impact.</p>
+    </div>
+    <a href="{{ url_for('creator.create_quiz') }}" class="btn btn-primary">+ New Quiz</a>
+  </div>
+
+  <div class="stats mb6">
+    <div class="stat"><div class="stat-icon">📋</div><div class="stat-value tcyan">{{ quizzes|length }}</div><div class="stat-label">Total Quizzes</div></div>
+    <div class="stat"><div class="stat-icon">🚀</div><div class="stat-value" style="color:#4ade80">{{ published_count }}</div><div class="stat-label">Published</div></div>
+    <div class="stat"><div class="stat-icon">❓</div><div class="stat-value tamber">{{ total_questions }}</div><div class="stat-label">Questions</div></div>
+    <div class="stat"><div class="stat-icon">🎯</div><div class="stat-value" style="color:#c084fc">{{ total_attempts }}</div><div class="stat-label">Attempts</div></div>
+  </div>
+
+  <div class="flex ai-c jb mb4">
+    <h2 style="font-size:1rem;font-weight:700">Your Quizzes</h2>
+    {% if quizzes %}<span class="t3" style="font-size:13px">{{ quizzes|length }} total</span>{% endif %}
+  </div>
+
+  {% if quizzes %}
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Title</th><th>Category</th><th>Difficulty</th><th>Questions</th><th>Attempts</th><th>Avg Score</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for q in quizzes %}
+        <tr>
+          <td>
+            <div class="fw7">{{ q.title }}</div>
+            <div style="font-size:12px;color:var(--t3)">⏱ {{ q.time_limit }} min</div>
+          </td>
+          <td><span class="badge b-gray">{{ q.category }}</span></td>
+          <td>
+            {% if q.difficulty=='Easy' %}<span class="badge b-success">Easy</span>
+            {% elif q.difficulty=='Hard' %}<span class="badge b-danger">Hard</span>
+            {% else %}<span class="badge b-warning">Medium</span>{% endif %}
+          </td>
+          <td><b>{{ q.question_count }}</b>{% if q.question_count==0 %} <span class="badge b-danger">Empty</span>{% endif %}</td>
+          <td>{{ q.attempt_count }}</td>
+          <td>{% if q.attempt_count > 0 %}<b class="tgreen">{{ q.avg_score }}%</b>{% else %}<span class="t3">—</span>{% endif %}</td>
+          <td>{% if q.is_published %}<span class="badge b-success">● Live</span>{% else %}<span class="badge b-gray">Draft</span>{% endif %}</td>
+          <td>
+            <div class="flex g2 wrap">
+              <a href="{{ url_for('creator.manage_questions', quiz_id=q.id) }}" class="btn btn-ghost btn-sm">Questions</a>
+              <a href="{{ url_for('creator.edit_quiz',        quiz_id=q.id) }}" class="btn btn-outline btn-sm">Edit</a>
+              <a href="{{ url_for('creator.analytics',        quiz_id=q.id) }}" class="btn btn-outline btn-sm">📊</a>
+              <form method="POST" action="{{ url_for('creator.toggle_publish', quiz_id=q.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm {% if q.is_published %}btn-amber{% else %}btn-success{% endif %}">
+                  {{ 'Unpublish' if q.is_published else 'Publish' }}
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('creator.delete_quiz', quiz_id=q.id) }}" style="display:inline"
+                    onsubmit="return confirm('Delete this quiz and all its data?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="empty">
+      <div class="ei">📝</div>
+      <h3>No quizzes yet</h3>
+      <p>Create your first quiz and start sharing knowledge.</p>
+      <a href="{{ url_for('creator.create_quiz') }}" class="btn btn-primary">Create First Quiz</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

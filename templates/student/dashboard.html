@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+  <div class="ph">
+    <div>
+      <h1>Browse Quizzes</h1>
+      <p>Test your knowledge across all topics.</p>
+    </div>
+  </div>
+
+  <div class="stats mb6" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat">
+      <div class="stat-icon">&#127919;</div>
+      <div class="stat-value tcyan">{{ total_attempts }}</div>
+      <div class="stat-label">Quizzes Taken</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">&#128202;</div>
+      <div class="stat-value" style="color:#4ade80">{{ avg_score }}%</div>
+      <div class="stat-label">Average Score</div>
+    </div>
+    <div class="stat">
+      <div class="stat-icon">&#128203;</div>
+      <div class="stat-value tamber">{{ quizzes|length }}</div>
+      <div class="stat-label">Available</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex g3 mb5 wrap ai-c">
+    <input type="text" id="s-search" placeholder="Search quizzes..." class="input" style="max-width:260px">
+    <select id="s-diff" class="input" style="max-width:155px">
+      <option value="">All Difficulties</option>
+      <option>Easy</option>
+      <option>Medium</option>
+      <option>Hard</option>
+    </select>
+    <select id="s-cat" class="input" style="max-width:195px">
+      <option value="">All Categories</option>
+      {% for c in categories %}<option>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+
+  {% if quizzes %}
+  <div class="quiz-grid" id="qgrid">
+    {% for q in quizzes %}
+    <div class="qcard"
+         data-title="{{ q.title|lower }}"
+         data-diff="{{ q.difficulty }}"
+         data-cat="{{ q.category }}"
+         data-url="{{ url_for('student.quiz_detail', quiz_id=q.id) }}"
+         onclick="goToQuiz(this)">
+      <div class="flex jb ai-c">
+        <div class="flex g2 wrap">
+          <span class="badge b-gray" style="font-size:10px">{{ q.category }}</span>
+          {% if q.difficulty == 'Easy' %}
+            <span class="badge b-success" style="font-size:10px">Easy</span>
+          {% elif q.difficulty == 'Hard' %}
+            <span class="badge b-danger" style="font-size:10px">Hard</span>
+          {% else %}
+            <span class="badge b-warning" style="font-size:10px">Medium</span>
+          {% endif %}
+        </div>
+        {% if q.id in attempted_ids %}
+          <span class="badge b-cyan" style="font-size:10px">Done</span>
+        {% endif %}
+      </div>
+      <div class="qcard-title">{{ q.title }}</div>
+      {% if q.description %}
+        <div class="qcard-desc">{{ q.description[:90] }}{% if q.description|length > 90 %}...{% endif %}</div>
+      {% endif %}
+      <div class="qcard-meta">
+        <span class="badge b-gray">{{ q.question_count }} Qs</span>
+        <span class="badge b-gray">{{ q.time_limit }} min</span>
+        {% if q.attempt_count > 0 %}
+          <span class="badge b-gray">{{ q.avg_score }}% avg</span>
+        {% endif %}
+      </div>
+      <div style="margin-top:auto;padding-top:.75rem">
+        <div class="btn btn-primary btn-blk" style="pointer-events:none">
+          {% if q.id in attempted_ids %}Retake{% else %}Start Quiz{% endif %} &rarr;
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="no-results" style="display:none;text-align:center;padding:3rem;color:var(--t3)">
+    <div style="font-size:2.5rem;margin-bottom:.75rem">&#128269;</div>
+    <p>No quizzes match your search.</p>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty">
+      <div class="ei">&#128141;</div>
+      <h3>No quizzes yet</h3>
+      <p>Check back later!</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if my_attempts %}
+  <div style="margin-top:3rem">
+    <div class="flex ai-c jb mb4">
+      <h2 style="font-size:1rem;font-weight:700">Recent Activity</h2>
+      <a href="{{ url_for('student.history') }}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Quiz</th><th>Score</th><th>Grade</th><th>Date</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in my_attempts %}
+          <tr>
+            <td class="fw7">{{ a.quiz.title }}</td>
+            <td>
+              {% if a.score_percentage >= 70 %}
+                <b style="color:#4ade80">{{ a.score_percentage }}%</b>
+              {% elif a.score_percentage >= 50 %}
+                <b style="color:var(--amber)">{{ a.score_percentage }}%</b>
+              {% else %}
+                <b style="color:#fb7185">{{ a.score_percentage }}%</b>
+              {% endif %}
+              <span class="t3" style="font-size:12px">({{ a.total_score }}/{{ a.max_score }})</span>
+            </td>
+            <td>
+              {% if a.score_percentage >= 70 %}
+                <span class="badge b-success">{{ a.grade[0] }} &mdash; {{ a.grade[1] }}</span>
+              {% elif a.score_percentage >= 50 %}
+                <span class="badge b-warning">{{ a.grade[0] }} &mdash; {{ a.grade[1] }}</span>
+              {% else %}
+                <span class="badge b-danger">{{ a.grade[0] }} &mdash; {{ a.grade[1] }}</span>
+              {% endif %}
+            </td>
+            <td class="t3" style="font-size:13px">{{ a.completed_at.strftime('%b %d, %Y') }}</td>
+            <td>
+              <a href="{{ url_for('student.result', attempt_id=a.id) }}" class="btn btn-ghost btn-sm">Review</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function goToQuiz(el) {
+  window.location.href = el.getAttribute('data-url');
+}
+
+var grid  = document.getElementById('qgrid');
+var noRes = document.getElementById('no-results');
+
+if (grid) {
+  var cards = Array.from(grid.children);
+  function filt() {
+    var q = document.getElementById('s-search').value.toLowerCase();
+    var d = document.getElementById('s-diff').value;
+    var c = document.getElementById('s-cat').value;
+    var vis = 0;
+    cards.forEach(function(card) {
+      var ok = (!q || card.dataset.title.includes(q))
+            && (!d || card.dataset.diff === d)
+            && (!c || card.dataset.cat === c);
+      card.style.display = ok ? '' : 'none';
+      if (ok) vis++;
+    });
+    if (noRes) noRes.style.display = vis === 0 ? 'block' : 'none';
+  }
+  ['s-search','s-diff','s-cat'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.addEventListener('input',  filt);
+    el.addEventListener('change', filt);
+  });
+}
+</script>
+{% endblock %}

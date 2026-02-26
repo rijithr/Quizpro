@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🧠</div>
+      <h1>Welcome back</h1>
+      <p>Sign in to your QuizPro account</p>
+    </div>
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="fg mb4">
+        <label class="label">Email Address</label>
+        {{ form.email(class='input' + (' is-invalid' if form.email.errors else ''), placeholder='you@example.com') }}
+        {% for e in form.email.errors %}<span class="err">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="fg mb5">
+        <label class="label">Password</label>
+        {{ form.password(class='input' + (' is-invalid' if form.password.errors else ''), placeholder='Your password') }}
+        {% for e in form.password.errors %}<span class="err">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="check mb5">
+        {{ form.remember(id='rem') }}
+        <label for="rem" style="font-size:13px;color:var(--t2);cursor:pointer">Keep me signed in</label>
+      </div>
+      <div class="fg mb4">
+        {{ form.recaptcha }}
+        {% for e in form.recaptcha.errors %}<span class="err">{{ e }}</span>{% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-blk btn-lg">Sign In →</button>
+    </form>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <div class="auth-sep"><span>New here?</span></div>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-outline btn-blk">Create a free account</a>
+  </div>
+</div>
+{% endblock %}

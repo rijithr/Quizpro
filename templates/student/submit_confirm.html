@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-sm">
+  <div class="card slide-up" style="margin-top:2rem">
+    <div class="card-body tc" style="padding:2.5rem 2rem">
+      <div style="font-size:3.5rem;margin-bottom:1rem">🏁</div>
+      <h2 style="font-family:var(--font2);font-size:1.5rem;margin-bottom:.4rem">Ready to Submit?</h2>
+      <p class="t2 mb5">{{ quiz.title }}</p>
+
+      <div class="flex jc g4 mb5 wrap">
+        <div style="padding:16px 24px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);min-width:100px">
+          <div style="font-size:1.6rem;font-weight:800;color:#4ade80">{{ answered }}</div>
+          <div style="font-size:12px;color:var(--t3)">Answered</div>
+        </div>
+        <div style="padding:16px 24px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);min-width:100px">
+          <div style="font-size:1.6rem;font-weight:800;color:var(--amber)">{{ unanswered }}</div>
+          <div style="font-size:12px;color:var(--t3)">Unanswered</div>
+        </div>
+      </div>
+
+      {% if unanswered > 0 %}
+      <div style="background:var(--amber-dim);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;text-align:left">
+        <p style="font-size:13px;color:var(--amber);margin:0">⚠️ {{ unanswered }} unanswered question{{ 's' if unanswered!=1 else '' }} — these will score 0 marks.</p>
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="flex jc g3 wrap">
+          <a href="{{ url_for('student.attempt_quiz', quiz_id=quiz.id, attempt_id=attempt.id, q=1) }}" class="btn btn-outline">← Review Answers</a>
+          <button type="submit" class="btn btn-success btn-lg">Submit Quiz ✓</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

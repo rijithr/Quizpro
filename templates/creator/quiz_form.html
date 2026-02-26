@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-sm">
+  <div class="ph">
+    <div>
+      <h1>{{ action }} Quiz</h1>
+      <p>{% if action=='Create' %}Design a new quiz for students{% else %}Update quiz details{% endif %}</p>
+    </div>
+    <a href="{{ url_for('creator.dashboard') }}" class="btn btn-outline">← Back</a>
+  </div>
+  <div class="card slide-up">
+    <div class="card-body">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="fg mb4">
+          <label class="label">Quiz Title</label>
+          {{ form.title(class='input'+(' is-invalid' if form.title.errors else ''), placeholder='e.g. Python Fundamentals Quiz') }}
+          {% for e in form.title.errors %}<span class="err">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="fg mb4">
+          <label class="label">Description</label>
+          {{ form.description(class='input'+(' is-invalid' if form.description.errors else ''), rows=3, placeholder='What will students learn or be tested on?') }}
+        </div>
+        <div class="row2 mb4">
+          <div class="fg">
+            <label class="label">Category</label>
+            {{ form.category(class='input') }}
+          </div>
+          <div class="fg">
+            <label class="label">Difficulty</label>
+            {{ form.difficulty(class='input') }}
+          </div>
+        </div>
+        <div class="fg mb5">
+          <label class="label">Time Limit (minutes)</label>
+          {{ form.time_limit(class='input'+(' is-invalid' if form.time_limit.errors else ''), style='max-width:180px') }}
+          <span class="hint">Students must finish within this duration.</span>
+          {% for e in form.time_limit.errors %}<span class="err">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="check mb5">
+          {{ form.is_published(id='pub') }}
+          <label for="pub" style="font-size:14px;cursor:pointer"><b>Publish immediately</b> — visible to all students</label>
+        </div>
+        <div class="divider"></div>
+        <div class="flex g3" style="justify-content:flex-end">
+          <a href="{{ url_for('creator.dashboard') }}" class="btn btn-outline">Cancel</a>
+          {{ form.submit(class='btn btn-primary') }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

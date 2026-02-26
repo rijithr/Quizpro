@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% block head %}
+<style>
+  .opt-input { display: none; }
+  .opt-input:checked + .opt-card { border-color: var(--cyan); background: var(--cyan-dim); }
+  .opt-input:checked + .opt-card .opt-letter { background: var(--cyan); color: #000; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-sm">
+
+  <!-- Top bar -->
+  <div class="flex ai-c jb mb4" style="gap:1rem;flex-wrap:wrap">
+    <div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:2px">{{ quiz.title }}</div>
+      <div style="font-size:1.1rem;font-weight:800">
+        Question {{ q_num }}
+        <span style="color:var(--t3);font-weight:400">of {{ questions|length }}</span>
+      </div>
+    </div>
+    <div class="timer" id="timer-box">
+      ⏱ <span id="timer-val" style="min-width:48px;display:inline-block;text-align:center">--:--</span>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="flex ai-c g3 mb4">
+    <div class="progress" style="flex:1;height:6px">
+      <div class="pbar" style="width:{{ (progress / questions|length * 100)|int }}%"></div>
+    </div>
+    <span class="t3" style="font-size:13px;white-space:nowrap">{{ progress }}/{{ questions|length }} answered</span>
+  </div>
+
+  <!-- Q Bubbles -->
+  <div class="q-nav mb4">
+    {% for qobj in questions %}
+    <div class="qbub {% if loop.index == q_num %}current{% elif qobj.id in answered_ids %}answered{% endif %}">
+      {{ loop.index }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Question Card -->
+  <div class="card mb4 slide-up">
+    <div class="card-body">
+      <div class="section-tag mb3">Question {{ q_num }}</div>
+      <p style="font-size:17px;font-weight:600;line-height:1.65;margin-bottom:1.75rem">
+        {{ question.text }}
+      </p>
+
+      <form method="POST" id="ans-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Hidden field to signal whether this is the last question -->
+        <input type="hidden" name="is_last" value="{{ 'yes' if q_num == questions|length else 'no' }}">
+
+        {% set letters = ['A','B','C','D'] %}
+        {% set opts    = [question.option_a, question.option_b, question.option_c, question.option_d] %}
+
+        {% for i in range(4) %}
+          {% if opts[i] %}
+          {% set l = letters[i] %}
+          <label style="display:block;cursor:{% if existing %}default{% else %}pointer{% endif %}">
+            <input
+              type="radio"
+              name="answer"
+              value="{{ l }}"
+              class="opt-input"
+              {% if existing and existing.selected_option == l %}checked{% endif %}
+              {% if existing %}disabled{% endif %}>
+            <div class="opt-card
+              {% if existing %}
+                {% if l == question.correct_option %}correct
+                {% elif existing.selected_option == l and l != question.correct_option %}wrong
+                {% endif %}
+              {% endif %}">
+              <div class="opt-letter">
+                {% if existing %}
+                  {% if l == question.correct_option %}✓
+                  {% elif existing.selected_option == l %}✗
+                  {% else %}{{ l }}{% endif %}
+                {% else %}{{ l }}{% endif %}
+              </div>
+              <span>{{ opts[i] }}</span>
+              {% if existing and l == question.correct_option %}
+              <span style="margin-left:auto;font-weight:700;color:#4ade80;font-size:13px">Correct</span>
+              {% endif %}
+            </div>
+          </label>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Explanation after answering -->
+        {% if existing and question.explanation %}
+        <div style="margin-top:1rem;padding:12px 16px;border-radius:10px;
+                    background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2)">
+          <div style="font-size:11px;font-weight:700;color:var(--info);letter-spacing:.5px;margin-bottom:5px">
+            💡 EXPLANATION
+          </div>
+          <p style="font-size:14px;color:var(--t2);margin:0;line-height:1.6">{{ question.explanation }}</p>
+        </div>
+        {% endif %}
+
+        <div class="divider"></div>
+
+        <div class="flex jb ai-c" style="gap:.75rem;flex-wrap:wrap">
+          <!-- Prev -->
+          {% if q_num > 1 %}
+          <a href="{{ url_for('student.attempt_quiz', quiz_id=quiz.id, attempt_id=attempt.id, q=q_num-1) }}"
+             class="btn btn-outline">← Prev</a>
+          {% else %}<span></span>{% endif %}
+
+          <div class="flex g2">
+            {% if not existing %}
+              <!-- Skip: clears radio selection and submits -->
+              <button type="button" class="btn btn-ghost" id="skip-btn" onclick="doSkip()">
+                Skip →
+              </button>
+            {% endif %}
+
+            {% if q_num < questions|length %}
+              <!-- Not last question: normal submit -->
+              <button type="submit" class="btn btn-primary" id="next-btn">
+                {% if existing %}Next →{% else %}Submit & Next →{% endif %}
+              </button>
+            {% else %}
+              {% if existing %}
+                <!-- Already answered last question: go straight to finish -->
+                <a href="{{ url_for('student.submit_quiz', quiz_id=quiz.id, attempt_id=attempt.id) }}"
+                   class="btn btn-success btn-lg">Finish 🏁</a>
+              {% else %}
+                <!-- Last question NOT yet answered: MUST submit form first to save answer -->
+                <button type="submit" class="btn btn-success btn-lg" id="finish-btn">
+                  Save &amp; Finish 🏁
+                </button>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="tc">
+    <span class="badge b-cyan">
+      {{ question.marks }} mark{{ 's' if question.marks != 1 else '' }} for this question
+    </span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Timer ─────────────────────────────────────────────────────────────────────
+// 'Z' suffix forces JS to parse as UTC, not local time
+const startedAt     = new Date('{{ attempt.started_at.strftime("%Y-%m-%dT%H:%M:%S") }}Z');
+const limitSec      = {{ quiz.time_limit }} * 60;
+const timerBox      = document.getElementById('timer-box');
+const timerVal      = document.getElementById('timer-val');
+let   autoSubmitted = false;
+
+function tick() {
+  const elapsed   = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+  const remaining = Math.max(0, limitSec - elapsed);
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  timerVal.textContent = m + ':' + String(s).padStart(2, '0');
+  if (remaining <= 60) timerBox.classList.add('danger');
+  else timerBox.classList.remove('danger');
+
+  if (remaining === 0 && !autoSubmitted) {
+    autoSubmitted = true;
+    timerVal.textContent = '0:00';
+    const f    = document.createElement('form');
+    f.method   = 'POST';
+    f.action   = '{{ url_for("student.submit_quiz", quiz_id=quiz.id, attempt_id=attempt.id) }}';
+    const csrf = document.createElement('input');
+    csrf.type  = 'hidden'; csrf.name = 'csrf_token';
+    csrf.value = '{{ csrf_token() }}';
+    f.appendChild(csrf);
+    document.body.appendChild(f);
+    f.submit();
+  }
+}
+tick();
+setInterval(tick, 1000);
+
+// ── Skip handler ──────────────────────────────────────────────────────────────
+function doSkip() {
+  // Uncheck all radios so answer = None on server
+  document.querySelectorAll('input[name="answer"]').forEach(r => r.checked = false);
+  document.getElementById('ans-form').submit();
+}
+
+// ── Prevent double-submit ─────────────────────────────────────────────────────
+document.getElementById('ans-form').addEventListener('submit', function() {
+  ['next-btn','finish-btn','skip-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.disabled = true; el.style.opacity = '0.6'; }
+  });
+});
+</script>
+{% endblock %}

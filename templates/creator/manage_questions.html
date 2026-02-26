@@ -1,0 +1,410 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-md">
+
+  <!-- Header -->
+  <div class="ph">
+    <div>
+      <h1>{{ quiz.title }}</h1>
+      <div class="flex g2 mt2 wrap">
+        <span class="badge b-gray">{{ quiz.category }}</span>
+        {% if quiz.difficulty == 'Easy' %}
+          <span class="badge b-success">Easy</span>
+        {% elif quiz.difficulty == 'Hard' %}
+          <span class="badge b-danger">Hard</span>
+        {% else %}
+          <span class="badge b-warning">Medium</span>
+        {% endif %}
+        {% if quiz.is_published %}
+          <span class="badge b-success">&#9679; Live</span>
+        {% else %}
+          <span class="badge b-gray">Draft</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="ph-actions">
+      <a href="{{ url_for('creator.edit_quiz', quiz_id=quiz.id) }}" class="btn btn-outline btn-sm">Edit Info</a>
+      <a href="{{ url_for('creator.add_question', quiz_id=quiz.id) }}" class="btn btn-primary btn-sm">+ Add Manually</a>
+    </div>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="card mb5" style="background:rgba(0,212,200,.04);border-color:var(--border2)">
+    <div class="card-body" style="padding:1rem 1.5rem">
+      <div class="flex g4 wrap ai-c">
+        <div>
+          <span class="t3" style="font-size:11px">QUESTIONS</span><br>
+          <b>{{ quiz.question_count }}</b>
+        </div>
+        <div>
+          <span class="t3" style="font-size:11px">TIME LIMIT</span><br>
+          <b>{{ quiz.time_limit }} min</b>
+        </div>
+        <div>
+          <span class="t3" style="font-size:11px">TOTAL MARKS</span><br>
+          <b>{{ questions | sum(attribute='marks') }}</b>
+        </div>
+        <div>
+          <span class="t3" style="font-size:11px">ATTEMPTS</span><br>
+          <b>{{ quiz.attempt_count }}</b>
+        </div>
+        <div style="margin-left:auto" class="flex g2">
+          <form method="POST" action="{{ url_for('creator.toggle_publish', quiz_id=quiz.id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if quiz.is_published %}
+              <button type="submit" class="btn btn-sm btn-amber">Unpublish</button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-success">Publish</button>
+            {% endif %}
+          </form>
+          <a href="{{ url_for('creator.analytics', quiz_id=quiz.id) }}" class="btn btn-outline btn-sm">Analytics</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI GENERATION PANEL -->
+  <div class="ai-panel mb5">
+
+    <div class="ai-panel-title">
+      <span style="font-size:1.2rem">&#129302;</span>
+      AI Question Generator
+      <span style="font-size:11px;font-weight:500;color:rgba(192,132,252,.7);margin-left:4px">powered by Groq</span>
+      {% if not has_api_key %}
+        <span class="badge b-warning" style="margin-left:6px;font-size:10px">Key Missing</span>
+      {% else %}
+        <span class="badge b-success" style="margin-left:6px;font-size:10px">Ready</span>
+      {% endif %}
+    </div>
+
+    {% if not has_api_key %}
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:14px 18px;margin-bottom:1.25rem">
+      <p style="font-size:13px;color:var(--amber);margin:0 0 8px;font-weight:700">Groq API Key Required (100% Free)</p>
+      <p style="font-size:12px;color:var(--amber);opacity:.9;margin:0;line-height:1.85">
+        1. Go to <b>console.groq.com</b> and sign up (no credit card needed)<br>
+        2. Click <b>API Keys</b> in the sidebar, then <b>Create API Key</b><br>
+        3. Copy the key (starts with <b>gsk_...</b>)<br>
+        4. Open <b>config.py</b>, find GROQ_API_KEY and paste your key<br>
+        5. Save config.py and restart with <b>python app.py</b>
+      </p>
+    </div>
+    {% endif %}
+
+    <!-- Controls -->
+    <div class="row2" style="gap:12px;margin-bottom:1rem">
+      <div class="fg">
+        <label class="label">Topic / Subject</label>
+        <input type="text" id="ai-topic" class="input"
+               value="{{ quiz.category }}"
+               placeholder="e.g. Python, World War 2, Photosynthesis">
+      </div>
+      <div class="fg">
+        <label class="label">Difficulty</label>
+        <select id="ai-diff" class="input">
+          <option value="Easy"   {% if quiz.difficulty == 'Easy'   %}selected{% endif %}>Easy</option>
+          <option value="Medium" {% if quiz.difficulty == 'Medium' %}selected{% endif %}>Medium</option>
+          <option value="Hard"   {% if quiz.difficulty == 'Hard'   %}selected{% endif %}>Hard</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg mb4" style="max-width:200px">
+      <label class="label">Number of Questions</label>
+      <select id="ai-count" class="input">
+        <option value="3">3 questions</option>
+        <option value="5" selected>5 questions</option>
+        <option value="8">8 questions</option>
+        <option value="10">10 questions</option>
+        <option value="15">15 questions</option>
+      </select>
+    </div>
+
+    {% if has_api_key %}
+      <button class="btn btn-ai" id="ai-gen-btn" onclick="generateQuestions()">
+        Generate Questions with AI
+      </button>
+    {% else %}
+      <button class="btn btn-ai" disabled title="Add GROQ_API_KEY to config.py first">
+        Generate Questions with AI (API Key Required)
+      </button>
+    {% endif %}
+
+    <!-- Loading -->
+    <div id="ai-loading" style="display:none;margin-top:1.5rem;text-align:center;padding:1.5rem">
+      <div class="spinner" style="margin:0 auto .75rem"></div>
+      <p style="font-size:14px;color:#c084fc;margin:0">Groq is generating questions...</p>
+    </div>
+
+    <!-- Error -->
+    <div id="ai-error" style="display:none;margin-top:1rem;padding:12px 16px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:10px;font-size:13px;color:#fb7185"></div>
+
+    <!-- Preview -->
+    <div id="ai-preview" style="display:none;margin-top:1.5rem">
+      <div class="flex ai-c jb mb3">
+        <div style="font-weight:700;font-size:14px;color:#c084fc">
+          Preview
+          <span id="ai-sel-count" class="badge b-ai" style="margin-left:8px"></span>
+        </div>
+        <div class="flex g2">
+          <button class="btn btn-ghost btn-sm" onclick="selectAll(true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="selectAll(false)">None</button>
+        </div>
+      </div>
+      <div id="ai-q-list"></div>
+      <div class="flex g3 mt4" style="justify-content:flex-end">
+        <button class="btn btn-outline" onclick="clearPreview()">Cancel</button>
+        <button class="btn btn-ai btn-lg" id="ai-save-btn" onclick="saveSelected()">
+          Save Selected to Quiz
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- END AI PANEL -->
+
+  <!-- Questions List -->
+  {% if questions %}
+  <div class="section-tag">All Questions ({{ questions|length }})</div>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:.75rem">
+    {% for q in questions %}
+    <div class="card slide-up">
+      <div class="card-body" style="padding:1.25rem 1.5rem">
+        <div class="flex ai-c jb mb3">
+          <div class="flex ai-c g3">
+            <span style="width:32px;height:32px;border-radius:8px;background:var(--cyan-dim);color:var(--cyan);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">
+              {{ loop.index }}
+            </span>
+            <div class="flex g2 wrap">
+              <span class="badge b-cyan">{{ q.marks }} mark{% if q.marks != 1 %}s{% endif %}</span>
+              {% if q.ai_generated %}<span class="badge b-ai">AI</span>{% endif %}
+              {% if q.explanation %}<span class="badge b-gray">Explained</span>{% endif %}
+            </div>
+          </div>
+          <div class="flex g2">
+            <a href="{{ url_for('creator.edit_question', qid=q.id) }}" class="btn btn-outline btn-sm">Edit</a>
+            <form method="POST" action="{{ url_for('creator.delete_question', qid=q.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('Delete this question?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </div>
+        </div>
+
+        <p style="font-size:15px;font-weight:600;margin-bottom:1rem;line-height:1.5">{{ q.text }}</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          {% for letter, text in q.options.items() %}
+          {% if letter == q.correct_option %}
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3)">
+            <span style="width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;background:var(--success);color:#000">
+              {{ letter }}
+            </span>
+            <span style="font-size:13px;color:#4ade80">{{ text }} &#10003;</span>
+          </div>
+          {% else %}
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)">
+            <span style="width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;background:rgba(255,255,255,.06);color:var(--t3)">
+              {{ letter }}
+            </span>
+            <span style="font-size:13px;color:var(--t2)">{{ text }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        {% if q.explanation %}
+        <div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2)">
+          <span style="font-size:11px;font-weight:700;color:var(--info)">EXPLANATION  </span>
+          <span style="font-size:13px;color:var(--t2)">{{ q.explanation }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="margin-top:1.5rem;text-align:center">
+    <a href="{{ url_for('creator.add_question', quiz_id=quiz.id) }}" class="btn btn-primary">
+      + Add Another Question
+    </a>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="empty">
+      <div class="ei">&#10067;</div>
+      <h3>No questions yet</h3>
+      <p>Use the AI generator above or add questions manually.</p>
+      <a href="{{ url_for('creator.add_question', quiz_id=quiz.id) }}" class="btn btn-primary">Add Manually</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const QUIZ_ID = {{ quiz.id }};
+const CSRF    = document.querySelector('meta[name=csrf]') ? document.querySelector('meta[name=csrf]').content : '{{ csrf_token() }}';
+let generated = [];
+
+async function generateQuestions() {
+  const topic = document.getElementById('ai-topic').value.trim();
+  const diff  = document.getElementById('ai-diff').value;
+  const count = parseInt(document.getElementById('ai-count').value);
+
+  setLoading(true);
+  hideError();
+  document.getElementById('ai-preview').style.display = 'none';
+
+  try {
+    const res  = await fetch('/creator/quiz/' + QUIZ_ID + '/ai-generate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({ topic: topic, difficulty: diff, count: count })
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showError(data.error || 'Something went wrong. Please try again.');
+      return;
+    }
+    if (!data.questions || data.questions.length === 0) {
+      showError('No questions returned. Try a different topic.');
+      return;
+    }
+
+    generated = data.questions.map(function(q) {
+      return Object.assign({}, q, { _selected: true });
+    });
+    renderPreview();
+
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderPreview() {
+  const container = document.getElementById('ai-q-list');
+  container.innerHTML = '';
+
+  generated.forEach(function(q, i) {
+    const letters = ['A','B','C','D'];
+    const vals    = [q.option_a, q.option_b, q.option_c, q.option_d];
+
+    let optsHtml = '';
+    vals.forEach(function(opt, j) {
+      if (!opt) return;
+      const l  = letters[j];
+      const ok = l === q.correct;
+      optsHtml += '<div class="ai-opt' + (ok ? ' correct' : '') + '">' +
+        '<span class="ai-opt-letter">' + l + '</span>' +
+        '<span style="flex:1">' + opt + '</span>' +
+        (ok ? '<span style="font-weight:700;color:#4ade80">&#10003;</span>' : '') +
+        '</div>';
+    });
+
+    const marks = q.marks || 1;
+    const card  = document.createElement('div');
+    card.className = 'ai-q-preview' + (q._selected ? ' selected' : '');
+    card.innerHTML =
+      '<label class="ai-check-label">' +
+        '<input type="checkbox"' + (q._selected ? ' checked' : '') +
+               ' onchange="toggleQ(' + i + ', this.checked)">' +
+        '<span style="font-size:12px;font-weight:700;color:#c084fc">Question ' + (i+1) + '</span>' +
+        '<span class="badge b-ai" style="margin-left:auto;font-size:10px">' + marks + ' mark' + (marks > 1 ? 's' : '') + '</span>' +
+      '</label>' +
+      '<p class="q-text">' + q.question + '</p>' +
+      '<div class="ai-q-opts">' + optsHtml + '</div>' +
+      (q.explanation
+        ? '<div style="margin-top:8px;padding:8px 12px;border-radius:7px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);font-size:12px;color:var(--t2)"><b style="color:var(--info)">Explanation:</b> ' + q.explanation + '</div>'
+        : '');
+    container.appendChild(card);
+  });
+
+  document.getElementById('ai-preview').style.display = 'block';
+  updateCount();
+  document.getElementById('ai-preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleQ(i, val) {
+  generated[i]._selected = val;
+  document.querySelectorAll('.ai-q-preview')[i].classList.toggle('selected', val);
+  updateCount();
+}
+
+function selectAll(val) {
+  generated.forEach(function(q, i) {
+    q._selected = val;
+    const cards = document.querySelectorAll('.ai-q-preview');
+    const boxes = document.querySelectorAll('.ai-q-preview input[type=checkbox]');
+    if (cards[i]) cards[i].classList.toggle('selected', val);
+    if (boxes[i]) boxes[i].checked = val;
+  });
+  updateCount();
+}
+
+function updateCount() {
+  const n = generated.filter(function(q) { return q._selected; }).length;
+  document.getElementById('ai-sel-count').textContent = n + ' selected';
+  document.getElementById('ai-save-btn').disabled = n === 0;
+}
+
+function clearPreview() {
+  generated = [];
+  document.getElementById('ai-preview').style.display = 'none';
+}
+
+function setLoading(on) {
+  document.getElementById('ai-loading').style.display = on ? 'block' : 'none';
+  var btn = document.getElementById('ai-gen-btn');
+  if (btn) {
+    btn.disabled    = on;
+    btn.textContent = on ? 'Generating...' : 'Generate Questions with AI';
+  }
+}
+
+function showError(msg) {
+  var el = document.getElementById('ai-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('ai-error').style.display = 'none';
+}
+
+async function saveSelected() {
+  var toSave = generated.filter(function(q) { return q._selected; }).map(function(q) {
+    return Object.assign({}, q, { selected: true });
+  });
+  if (!toSave.length) return;
+
+  var btn = document.getElementById('ai-save-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const res  = await fetch('/creator/quiz/' + QUIZ_ID + '/ai-save', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({ questions: toSave })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.saved > 0) {
+      window.location.reload();
+    } else {
+      showError(data.error || 'Failed to save questions.');
+      btn.disabled    = false;
+      btn.textContent = 'Save Selected to Quiz';
+    }
+  } catch (err) {
+    showError('Network error: ' + err.message);
+    btn.disabled    = false;
+    btn.textContent = 'Save Selected to Quiz';
+  }
+}
+</script>
+{% endblock %}

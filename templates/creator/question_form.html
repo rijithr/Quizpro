@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-sm">
+  <div class="ph">
+    <div>
+      <h1>{{ action }} Question</h1>
+      <p>Quiz: <b>{{ quiz.title }}</b></p>
+    </div>
+    <a href="{{ url_for('creator.manage_questions', quiz_id=quiz.id) }}" class="btn btn-outline">← Back</a>
+  </div>
+  <div class="card slide-up">
+    <div class="card-body">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="fg mb5">
+          <label class="label">Question Text</label>
+          {{ form.text(class='input'+(' is-invalid' if form.text.errors else ''), rows=3, placeholder='Write a clear, unambiguous question...') }}
+          {% for e in form.text.errors %}<span class="err">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="section-tag">Answer Options (A & B required)</div>
+        {% for field, lbl, req in [(form.option_a,'A',True),(form.option_b,'B',True),(form.option_c,'C',False),(form.option_d,'D',False)] %}
+        <div class="fg mb3" style="display:flex;align-items:flex-start;gap:10px">
+          <div style="width:34px;height:38px;border-radius:8px;background:rgba(0,212,200,.1);border:1px solid var(--border2);color:var(--cyan);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;margin-top:2px">{{ lbl }}</div>
+          <div style="flex:1">
+            {{ field(class='input'+(' is-invalid' if field.errors else ''), placeholder=lbl+' — option text'+(' (optional)' if not req else '')) }}
+            {% for e in field.errors %}<span class="err">{{ e }}</span>{% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="row2 mt4 mb4">
+          <div class="fg">
+            <label class="label">Correct Answer</label>
+            {{ form.correct_option(class='input') }}
+            {% for e in form.correct_option.errors %}<span class="err">{{ e }}</span>{% endfor %}
+          </div>
+          <div class="fg">
+            <label class="label">Marks for this question</label>
+            {{ form.marks(class='input'+(' is-invalid' if form.marks.errors else '')) }}
+            <span class="hint">1–10 marks</span>
+          </div>
+        </div>
+
+        <div class="fg mb5">
+          <label class="label">Explanation (shown to students after answering)</label>
+          {{ form.explanation(class='input', rows=2, placeholder='Why is this the correct answer?') }}
+        </div>
+
+        <div class="divider"></div>
+        <div class="flex g3" style="justify-content:flex-end;flex-wrap:wrap">
+          <a href="{{ url_for('creator.manage_questions', quiz_id=quiz.id) }}" class="btn btn-outline">Cancel</a>
+          {% if action=='Add' %}
+          <button type="submit" name="add_another" value="1" class="btn btn-ghost">Save & Add Another</button>
+          {% endif %}
+          {{ form.submit(class='btn btn-primary') }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

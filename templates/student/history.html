@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-md">
+  <div class="ph">
+    <div><h1>My Quiz History</h1><p>All your completed attempts</p></div>
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline">← Browse Quizzes</a>
+  </div>
+  {% if attempts %}
+  <div class="stats mb5" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat"><div class="stat-icon">📝</div><div class="stat-value tcyan">{{ attempts|length }}</div><div class="stat-label">Total Attempts</div></div>
+    <div class="stat"><div class="stat-icon">📊</div><div class="stat-value" style="color:#4ade80">{{ avg_score }}%</div><div class="stat-label">Average Score</div></div>
+    <div class="stat"><div class="stat-icon">🏆</div><div class="stat-value tamber">{{ best_score }}%</div><div class="stat-label">Best Score</div></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Quiz</th><th>Category</th><th>Score</th><th>Grade</th><th>Duration</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+        {% for a in attempts %}
+        <tr>
+          <td class="t3">{{ loop.index }}</td>
+          <td class="fw7">{{ a.quiz.title }}</td>
+          <td><span class="badge b-gray">{{ a.quiz.category }}</span></td>
+          <td><b style="color:{% if a.score_percentage>=70 %}#4ade80{% elif a.score_percentage>=50 %}var(--amber){% else %}#fb7185{% endif %}">{{ a.score_percentage }}%</b> <span class="t3" style="font-size:12px">({{ a.total_score }}/{{ a.max_score }})</span></td>
+          <td><span class="badge {% if a.score_percentage>=70 %}b-success{% elif a.score_percentage>=50 %}b-warning{% else %}b-danger{% endif %}">{{ a.grade[0] }} — {{ a.grade[1] }}</span></td>
+          <td>{{ a.duration_minutes }}m</td>
+          <td class="t3" style="font-size:13px">{{ a.completed_at.strftime('%b %d, %Y') }}</td>
+          <td><a href="{{ url_for('student.result', attempt_id=a.id) }}" class="btn btn-ghost btn-sm">Review</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card"><div class="empty"><div class="ei">📭</div><h3>No attempts yet</h3><p>Take a quiz and results appear here.</p><a href="{{ url_for('student.dashboard') }}" class="btn btn-primary">Browse Quizzes</a></div></div>
+  {% endif %}
+</div>
+{% endblock %}

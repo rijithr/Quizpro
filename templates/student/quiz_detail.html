@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-sm">
+  <div class="ph">
+    <div>
+      <h1>{{ quiz.title }}</h1>
+      <div class="flex g2 mt2 wrap">
+        <span class="badge b-gray">{{ quiz.category }}</span>
+        {% if quiz.difficulty=='Easy' %}<span class="badge b-success">Easy</span>
+        {% elif quiz.difficulty=='Hard' %}<span class="badge b-danger">Hard</span>
+        {% else %}<span class="badge b-warning">Medium</span>{% endif %}
+      </div>
+    </div>
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline">← Back</a>
+  </div>
+
+  <div class="card mb4">
+    <div class="card-body">
+      {% if quiz.description %}
+      <p style="font-size:15px;line-height:1.7;color:var(--t2);margin-bottom:1.5rem">{{ quiz.description }}</p>
+      {% endif %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem">
+        {% for icon, val, lbl in [('❓', quiz.question_count, 'Questions'), ('⏱', quiz.time_limit ~ ' min', 'Time Limit'), ('📊', quiz.difficulty, 'Difficulty'), ('🏆', (quiz.avg_score|string + '%') if quiz.attempt_count else '—', 'Avg Score')] %}
+        <div style="text-align:center;padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border)">
+          <div style="font-size:1.4rem;margin-bottom:4px">{{ icon }}</div>
+          <div style="font-weight:700;font-size:1.05rem">{{ val }}</div>
+          <div style="font-size:12px;color:var(--t3)">{{ lbl }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="background:var(--amber-dim);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem">
+        <p style="font-size:13px;color:var(--amber);margin:0">⚠️ Timer starts immediately when you begin. Answer all questions before time runs out.</p>
+      </div>
+      <form method="POST" action="{{ url_for('student.start_quiz', quiz_id=quiz.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-blk btn-lg">🚀 Start Quiz Now</button>
+      </form>
+    </div>
+  </div>
+
+  {% if prev_attempts %}
+  <div class="card">
+    <div class="card-head"><h3 style="font-size:1rem;font-weight:700">Your Previous Attempts</h3></div>
+    <div class="tbl-wrap" style="border:none;border-radius:0">
+      <table>
+        <thead><tr><th>#</th><th>Score</th><th>Grade</th><th>Duration</th><th>Date</th><th></th></tr></thead>
+        <tbody>
+          {% for a in prev_attempts %}
+          <tr>
+            <td class="t3">#{{ loop.index }}</td>
+            <td><b style="color:{% if a.score_percentage>=70 %}#4ade80{% elif a.score_percentage>=50 %}var(--amber){% else %}#fb7185{% endif %}">{{ a.score_percentage }}%</b></td>
+            <td><span class="badge {% if a.score_percentage>=70 %}b-success{% elif a.score_percentage>=50 %}b-warning{% else %}b-danger{% endif %}">{{ a.grade[0] }}</span></td>
+            <td>{{ a.duration_minutes }}m</td>
+            <td class="t3" style="font-size:13px">{{ a.completed_at.strftime('%b %d, %Y') }}</td>
+            <td><a href="{{ url_for('student.result', attempt_id=a.id) }}" class="btn btn-ghost btn-sm">Review</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
